@@ -1,6 +1,6 @@
 // deslopr-disable-file -- rule examples quote slop on purpose
 // Repository hygiene: what a change should never commit, whatever wrote it.
-import { re, matchAll } from './helpers.js';
+import { re, matchAll, inView, proseView } from './helpers.js';
 
 const SECRETS = [
   ['AWS access key', /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g],
@@ -91,6 +91,31 @@ export default [
     examples: {
       bad: ['The build\u200B passes on main.'],
       good: ['The build passes on main.'],
+      fixes: [
+        { text: 'The build\u200B passes on main.\n', output: 'The build passes on main.\n' },
+        { path: 'a.js', text: '// Retry \uFEFF twice.\nretry(2);\n', output: '// Retry twice.\nretry(2);\n' },
+        { text: 'Injects values \u200B\u200Bfrom the app context.\n', output: 'Injects values from the app context.\n' },
+        { text: 'Ping @\u200Bteam in the channel.\n', output: 'Ping @\u200Bteam in the channel.\n' },
+        { text: 'Call VeryLong\u200BClassName here.\n', output: 'Call VeryLong\u200BClassName here.\n' },
+        { path: 'a.js', text: 'const sep = " \u200B";\n', output: 'const sep = " \u200B";\n' },
+      ],
+    },
+    // Only zero-width characters that touch a space or tab: there they separate nothing and
+    // cannot be a line-break hint or a mention breaker. Soft hyphens and bidi controls can be
+    // intentional and are left for a person; so is anything inside strings or code.
+    autofix(ctx) {
+      const view = proseView(ctx);
+      const out = [];
+      for (const m of matchAll(/[\u200B\u2060\uFEFF]+/g, ctx.raw)) {
+        const i = m.index;
+        const j = i + m[0].length;
+        const spaceBefore = /[ \t]/.test(ctx.raw[i - 1] || '');
+        const spaceAfter = /[ \t]/.test(ctx.raw[j] || '');
+        if (!spaceBefore && !spaceAfter) continue;
+        if (!inView(ctx, view, i, j)) continue;
+        out.push({ start: i, end: spaceBefore && spaceAfter ? j + 1 : j, text: '', line: ctx.positionOf(i).line });
+      }
+      return out;
     },
   },
   {

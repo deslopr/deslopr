@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scanText, slopIndex, grade } from '../src/core/index.js';
+import { scanText, fixText, slopIndex, grade } from '../src/core/index.js';
 import { lex } from '../src/core/lexer.js';
 import { buildViews, markdownProse } from '../src/core/views.js';
 import { classify } from '../src/core/files.js';
@@ -108,4 +108,39 @@ test('data files are skipped and huge inputs stay fast', () => {
   const t = Date.now();
   scanText(big, { path: 'big.md' });
   assert.ok(Date.now() - t < 5000, 'a 200-copy document should scan in under 5 s');
+});
+
+test('fix honours directives, config, the allow list and diff lines', () => {
+  const text = 'One.【1†source】\n<!-- deslopr-disable-next-line prose/chat-citation -- quoted from the export -->\nTwo.【2†source】\nThree.【3†source】\n';
+  const r = fixText(text, { path: 'a.md' });
+  assert.equal(r.output, 'One.\n<!-- deslopr-disable-next-line prose/chat-citation -- quoted from the export -->\nTwo.【2†source】\nThree.\n');
+  assert.deepEqual(r.fixes.map((f) => f.line), [1, 4]);
+  assert.equal(fixText(text, { path: 'a.md', config: { rules: { 'prose/chat-citation': 'off' } } }).changed, false);
+  assert.equal(fixText(text, { path: 'a.md', config: { only: ['code'] } }).changed, false);
+  assert.equal(fixText(text, { path: 'a.md', lines: new Set([4]) }).output, text.replace('Three.【3†source】', 'Three.'));
+  assert.equal(fixText('Done. I hope this helps!\n', { path: 'a.md', config: { allow: ['hope this helps'] } }).changed, false);
+});
+
+test('fix keeps a BOM and CRLF line endings', () => {
+  const r = fixText('﻿function f() {\r\n  debugger;\r\n  return 1;\r\n}\r\n', { path: 'a.js' });
+  assert.equal(r.output, '﻿function f() {\r\n  return 1;\r\n}\r\n');
+});
+
+test('fix leaves a file alone when the result would gain a finding', () => {
+  const rule = {
+    id: 'prose/test-bad-fix', domain: 'prose', severity: 'warn', name: 'test', why: 'test', fix: 'test',
+    patterns: [/\bzzz\b/g],
+    autofix: (ctx) => [{ start: ctx.raw.indexOf('zzz'), end: ctx.raw.indexOf('zzz') + 3, text: 'zzz\nzzz', line: 1 }],
+  };
+  const r = fixText('A zzz here.\n', { path: 'a.md', rules: [rule] });
+  assert.equal(r.changed, false);
+  assert.match(r.rejected, /would add a prose\/test-bad-fix finding/);
+  assert.equal(r.output, 'A zzz here.\n');
+});
+
+test('fix drops overlapping edits instead of merging them', () => {
+  const mk = (id, start, end) => ({ id, domain: 'prose', severity: 'warn', name: id, why: 'w', fix: 'f', patterns: [/abcdef/g], autofix: () => [{ start, end, text: '', line: 1 }] });
+  const r = fixText('abcdef\n', { path: 'a.md', rules: [mk('prose/a', 0, 4), mk('prose/b', 2, 6)] });
+  assert.equal(r.output, 'ef\n');
+  assert.deepEqual(r.fixes.map((f) => f.rule), ['prose/a']);
 });

@@ -65,6 +65,8 @@ export function formatText(results, summary, opts = {}) {
     out.push(`${k.bold('deslopr:')} ${total} finding${total === 1 ? '' : 's'} (${parts.join(', ')}) in ${summary.filesWithFindings} of ${summary.files} files · slop index ${summary.index} (${summary.grade}, ${GRADE_WORD[summary.grade]})`);
   }
   if (hiddenInfo > 0) out.push(k.gray(`${hiddenInfo} info finding${hiddenInfo === 1 ? '' : 's'} outside clusters hidden; --verbose shows them.`));
+  const fixable = [...usedRules.keys()].filter((id) => getRule(id)?.autofix);
+  if (fixable.length) out.push(k.gray(`Some ${fixable.join(', ')} findings have a safe automatic fix: \`deslopr fix\` previews it as a diff.`));
   return out.join('\n');
 }
 

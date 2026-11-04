@@ -4,6 +4,12 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- `deslopr fix`: safe automatic fixes for pasted citation markers, standalone chat sentences, `debugger` and `breakpoint()` lines, and zero-width characters next to a space. It prints a diff by default; `--write` applies it only to files git can restore, and a fix is dropped if the result would gain any finding. Works with `--diff`, `--staged`, `--rule`, `--stdin` and `--json`.
+- `deslopr rules`, `deslopr explain` and `docs/RULES.md` mark the rules that have an autofix; a scan points to `deslopr fix` when some findings can be fixed.
+- README: a prompt to paste into a coding agent that installs deslopr and runs a first pass, and a table of the ways to keep a deliberate finding.
+
 ### Fixed
 
 - Scans of large files are much faster: sentence-start patterns no longer rescan long runs of blanked text (a 54 KB HTML file went from 10 s to under 1 s). Findings are unchanged.

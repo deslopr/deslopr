@@ -6,13 +6,15 @@
 
 Change a severity or turn a rule off in `.deslopr.json`; suppress one line with `deslopr-disable-next-line <rule> -- <reason>`.
 
+4 rules have a safe autofix, marked **autofix** below: `deslopr fix` previews it as a diff and `deslopr fix --write` applies it. The fix covers only the unambiguous cases; everything else stays a finding for a person.
+
 ## Writing
 
 | Rule | Severity | What it catches |
 |---|---|---|
-| [`prose/chatbot-artifact`](#prosechatbot-artifact) | error | Chat assistant residue |
+| [`prose/chatbot-artifact`](#prosechatbot-artifact) | error, autofix | Chat assistant residue |
 | [`prose/chatbot-closer`](#prosechatbot-closer) | warn | Chatbot sign-off |
-| [`prose/chat-citation`](#prosechat-citation) | error | Pasted chat citation marker |
+| [`prose/chat-citation`](#prosechat-citation) | error, autofix | Pasted chat citation marker |
 | [`prose/placeholder`](#proseplaceholder) | error | Unfilled placeholder |
 | [`prose/binary-contrast`](#prosebinary-contrast) | warn | Binary contrast ("it's not X, it's Y") |
 | [`prose/negative-listing`](#prosenegative-listing) | warn | Negative listing ("No X. No Y. Just Z.") |
@@ -36,7 +38,7 @@ Change a severity or turn a rule off in `.deslopr.json`; suppress one line with 
 
 ### prose/chatbot-artifact
 
-**Chat assistant residue** · error · English and French
+**Chat assistant residue** · error · autofix · English and French
 
 **Why.** Lines a chat assistant says to its user ended up in the deliverable. Readers notice at once.
 
@@ -69,6 +71,81 @@ We hope the new import flow helps teams with large catalogs.
 Here is the configuration file used in production.
 ```
 
+`deslopr fix` changes:
+
+```markdown
+The function returns a list of users. I hope this helps!
+```
+
+into
+
+```markdown
+The function returns a list of users.
+```
+
+```markdown
+# Setup
+
+Run the installer.
+
+Hope this helps.
+```
+
+into
+
+```markdown
+# Setup
+
+Run the installer.
+```
+
+```markdown
+Lancez le script. J'espère que cela vous aide ! La suite est dans le guide.
+```
+
+into
+
+```markdown
+Lancez le script. La suite est dans le guide.
+```
+
+```py
+def total(items):
+    # I hope this helps!
+    return sum(items)
+```
+
+into
+
+```py
+def total(items):
+    return sum(items)
+```
+
+```ts
+// Retries twice. I hope this helps.
+export const RETRIES = 2;
+```
+
+into
+
+```ts
+// Retries twice.
+export const RETRIES = 2;
+```
+
+and leaves alone:
+
+```markdown
+I hope this helps you get started with the API.
+```
+```markdown
+- I hope this helps!
+```
+```js
+const msg = "Done. I hope this helps!";
+```
+
 ### prose/chatbot-closer
 
 **Chatbot sign-off** · warn · English and French
@@ -94,7 +171,7 @@ Questions go to the #infra channel; the on-call engineer answers within a day.
 
 ### prose/chat-citation
 
-**Pasted chat citation marker** · error
+**Pasted chat citation marker** · error · autofix
 
 **Why.** Citation tokens and tracking parameters that chat tools add survive copy and paste and mark the text as pasted.
 
@@ -119,6 +196,71 @@ See the [docs](https://example.org/guide?utm_source=newsletter).
 ```
 ```markdown
 Delete pasted markers such as `【4†source】` before you publish.
+```
+
+`deslopr fix` changes:
+
+```markdown
+Revenue grew 12% last year【4†source】.
+```
+
+into
+
+```markdown
+Revenue grew 12% last year.
+```
+
+```markdown
+The policy changed in March :contentReference[oaicite:2]{index=2}.
+```
+
+into
+
+```markdown
+The policy changed in March.
+```
+
+```markdown
+See the [docs](https://example.org/guide?utm_source=chatgpt.com).
+```
+
+into
+
+```markdown
+See the [docs](https://example.org/guide).
+```
+
+```markdown
+See <https://example.org/a?utm_source=chatgpt.com&page=2>.
+```
+
+into
+
+```markdown
+See <https://example.org/a?page=2>.
+```
+
+```markdown
+See https://example.org/a?page=2&utm_source=openai for details.
+```
+
+into
+
+```markdown
+See https://example.org/a?page=2 for details.
+```
+
+and leaves alone:
+
+```markdown
+Run:
+
+```sh
+curl "https://example.org/?utm_source=chatgpt.com"
+```
+```
+```js
+fetch("https://example.org/?utm_source=chatgpt.com");
 ```
 
 ### prose/placeholder
@@ -696,7 +838,7 @@ Run **one** migration at a time.
 | [`code/speculative-generality`](#codespeculative-generality) | warn | Code kept "for future use" |
 | [`code/vague-todo`](#codevague-todo) | info | TODO with no task in it |
 | [`code/redundant-docstring`](#coderedundant-docstring) | warn | Docstring echoes the signature |
-| [`code/debugger-left`](#codedebugger-left) | error | Debugger statement left in |
+| [`code/debugger-left`](#codedebugger-left) | error, autofix | Debugger statement left in |
 | [`code/test-cannot-fail`](#codetest-cannot-fail) | warn | Test that cannot fail |
 | [`code/version-suffix`](#codeversion-suffix) | info | _v2 / _new / _fixed clone |
 | [`code/commented-out-code`](#codecommented-out-code) | info | Block of commented-out code |
@@ -1015,7 +1157,7 @@ def get_user(user_id):
 
 ### code/debugger-left
 
-**Debugger statement left in** · error
+**Debugger statement left in** · error · autofix
 
 **Why.** A breakpoint in committed code stops or slows every run that hits it.
 
@@ -1040,6 +1182,69 @@ Does not flag:
 ```js
 // Set a breakpoint here with `debugger` when tracing.
 function f(x) { return x; }
+```
+
+`deslopr fix` changes:
+
+```js
+function f(x) {
+  debugger;
+  return x;
+}
+```
+
+into
+
+```js
+function f(x) {
+  return x;
+}
+```
+
+```py
+def f(x):
+    import pdb; pdb.set_trace()
+    return x
+```
+
+into
+
+```py
+def f(x):
+    return x
+```
+
+```rb
+def f(x)
+  binding.pry
+  x
+end
+```
+
+into
+
+```rb
+def f(x)
+  x
+end
+```
+
+and leaves alone:
+
+```js
+if (ready)
+  debugger;
+start();
+```
+```js
+const f = function () {}
+debugger
+(init)();
+```
+```py
+if ready:
+    breakpoint()
+start()
 ```
 
 ### code/test-cannot-fail
@@ -1667,7 +1872,7 @@ Does not flag:
 | [`repo/secret`](#reposecret) | error | Committed credential |
 | [`repo/merge-conflict`](#repomerge-conflict) | error | Conflict markers committed |
 | [`repo/local-path`](#repolocal-path) | warn | Machine-local path |
-| [`repo/invisible-unicode`](#repoinvisible-unicode) | warn | Invisible or bidirectional characters |
+| [`repo/invisible-unicode`](#repoinvisible-unicode) | warn, autofix | Invisible or bidirectional characters |
 | [`repo/agent-report-file`](#repoagent-report-file) | warn | Agent report committed as a file |
 | [`repo/duplicate-file`](#repoduplicate-file) | warn | Second copy of a file |
 
@@ -1750,7 +1955,7 @@ Vos fichiers sont dans /Users/vous/projets/site.
 
 ### repo/invisible-unicode
 
-**Invisible or bidirectional characters** · warn
+**Invisible or bidirectional characters** · warn · autofix
 
 **Why.** Zero-width spaces ride along when text is pasted from a chat window; bidi controls in code can hide what it really does.
 
@@ -1766,6 +1971,52 @@ Does not flag:
 
 ```markdown
 The build passes on main.
+```
+
+`deslopr fix` changes:
+
+```markdown
+The build​ passes on main.
+```
+
+into
+
+```markdown
+The build passes on main.
+```
+
+```js
+// Retry ﻿ twice.
+retry(2);
+```
+
+into
+
+```js
+// Retry twice.
+retry(2);
+```
+
+```markdown
+Injects values ​​from the app context.
+```
+
+into
+
+```markdown
+Injects values from the app context.
+```
+
+and leaves alone:
+
+```markdown
+Ping @​team in the channel.
+```
+```markdown
+Call VeryLong​ClassName here.
+```
+```js
+const sep = " ​";
 ```
 
 ### repo/agent-report-file

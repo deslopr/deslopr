@@ -1,7 +1,7 @@
 // deslopr-disable-file -- rule examples quote slop on purpose
 // Writing patterns. English and French side by side: one rule id per pattern family, so
 // disabling a rule disables it in every language.
-import { phrases, sentenceStart, re, BEFORE, SP, lineHasCitation, matchAll } from './helpers.js';
+import { phrases, sentenceStart, re, BEFORE, SP, lineHasCitation, matchAll, phraseSource, inView, proseView, lineRemoval } from './helpers.js';
 
 const notCited = (m, ctx) => !lineHasCitation(ctx, m.index);
 
@@ -25,6 +25,79 @@ export const FR_VOCAB = [
 
 const EN_VOCAB_RE = phrases(EN_VOCAB);
 const FR_VOCAB_RE = phrases(FR_VOCAB);
+
+// Chat residue that is a whole sentence on its own, so deleting it cannot cut a sentence the
+// writer meant. Fixed only in documents and comments, never in strings the program uses.
+const STANDALONE_RESIDUE = new RegExp(`(?:${[
+  'I hope this helps', 'hope this helps', 'I apologize for {the|any} confusion',
+  'j\'espère que {cela|ça} {vous |t\'}aide', 'je m\'excuse pour la confusion',
+].map(phraseSource).join('|')})(?:[ \\t\\u00a0\\u202f]*[.!]+)?`, 'giu');
+
+function residueSentenceEdits(ctx) {
+  const view = proseView(ctx);
+  const { raw } = ctx;
+  const out = [];
+  for (const m of matchAll(STANDALONE_RESIDUE, raw)) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (!inView(ctx, view, start, end)) continue;
+    const lineStart = raw.lastIndexOf('\n', start - 1) + 1;
+    let lineEnd = raw.indexOf('\n', end);
+    if (lineEnd < 0) lineEnd = raw.length;
+    const before = raw.slice(lineStart, start);
+    const rest = raw.slice(end, lineEnd).replace(/\r$/, '');
+    const punctuated = /[.!]$/.test(m[0]);
+    const line = ctx.positionOf(start).line;
+    if (view === 'comments' && /^[ \t]*(?:\/\/+|#+|\/\*+|\*|--)[ \t]*$/.test(before) && /^[ \t]*(?:\*\/)?[ \t]*$/.test(rest)) {
+      out.push(lineRemoval(ctx, line));
+      continue;
+    }
+    const atLineStart = /^[ \t]*$/.test(before);
+    if (!atLineStart && !/[.!?]["'’)\]]?[ \t]+$/.test(before)) continue;
+    if (!/^[ \t]*$/.test(rest) && !(punctuated && /^[ \t]+[\p{Lu}\p{N}"'“«(]/u.test(rest))) continue;
+    if (atLineStart && /^[ \t]*$/.test(rest)) out.push(lineRemoval(ctx, line));
+    else if (atLineStart) out.push({ start: lineStart + before.length, end: end + /^[ \t]*/.exec(rest)[0].length, text: '', line });
+    else out.push({ start: start - /[ \t]*$/.exec(before)[0].length, end, text: '', line });
+  }
+  return out;
+}
+
+// Pasted citation tokens, removed with the space that led to them. A marker glued between two
+// words becomes a space.
+const CITATION_MARKER = /【\d+(?::\d+)?†[^】\n]{0,80}】|(?::?contentReference)?\[oaicite:\d+\](?:\{index=\d+\})?|\uE200[^\uE201\n]{0,200}\uE201/gu;
+const CHAT_UTM = /([?&])utm_source=(?:chatgpt\.com|openai|perplexity|claude\.ai|copilot)(?![\w.%-])/gi;
+
+function citationEdits(ctx) {
+  const view = ctx.info.kind === 'markdown' || ctx.info.kind === 'text' ? 'codeless' : 'comments';
+  const { raw } = ctx;
+  const out = [];
+  for (const m of matchAll(CITATION_MARKER, raw)) {
+    let start = m.index;
+    let end = start + m[0].length;
+    if (!inView(ctx, view, start, end)) continue;
+    const line = ctx.positionOf(start).line;
+    const prev = raw[start - 1];
+    const next = raw[end];
+    let text = '';
+    if (prev === undefined || prev === '\n') {
+      while (raw[end] === ' ' || raw[end] === '\t') end++;
+    } else if (next === undefined || /[\s.,;:!?)\]}»"'’]/.test(next)) {
+      while (start > 0 && (raw[start - 1] === ' ' || raw[start - 1] === '\t')) start--;
+    } else if (/[\p{L}\p{N}]/u.test(prev) && /[\p{L}\p{N}]/u.test(next)) {
+      text = ' ';
+    }
+    out.push({ start, end, text, line });
+  }
+  for (const m of matchAll(CHAT_UTM, raw)) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (!inView(ctx, view, start, end)) continue;
+    const line = ctx.positionOf(start).line;
+    if (m[1] === '?' && raw[end] === '&') out.push({ start: start + 1, end: end + 1, text: '', line });
+    else out.push({ start, end, text: '', line });
+  }
+  return out;
+}
 
 export default [
   {
@@ -64,7 +137,18 @@ export default [
         'We hope the new import flow helps teams with large catalogs.',
         'Here is the configuration file used in production.',
       ],
+      fixes: [
+        { text: 'The function returns a list of users. I hope this helps!\n', output: 'The function returns a list of users.\n' },
+        { text: '# Setup\n\nRun the installer.\n\nHope this helps.\n', output: '# Setup\n\nRun the installer.\n' },
+        { text: 'Lancez le script. J\'espère que cela vous aide ! La suite est dans le guide.\n', output: 'Lancez le script. La suite est dans le guide.\n' },
+        { text: 'I hope this helps you get started with the API.\n', output: 'I hope this helps you get started with the API.\n' },
+        { text: '- I hope this helps!\n', output: '- I hope this helps!\n' },
+        { path: 'a.js', text: 'const msg = "Done. I hope this helps!";\n', output: 'const msg = "Done. I hope this helps!";\n' },
+        { path: 'a.py', text: 'def total(items):\n    # I hope this helps!\n    return sum(items)\n', output: 'def total(items):\n    return sum(items)\n' },
+        { path: 'a.ts', text: '// Retries twice. I hope this helps.\nexport const RETRIES = 2;\n', output: '// Retries twice.\nexport const RETRIES = 2;\n' },
+      ],
     },
+    autofix: residueSentenceEdits,
   },
   {
     id: 'prose/chatbot-closer',
@@ -113,7 +197,17 @@ export default [
         'The policy changed in March :contentReference[oaicite:2]{index=2}.',
       ],
       good: ['See the [docs](https://example.org/guide?utm_source=newsletter).', 'Delete pasted markers such as `【4†source】` before you publish.'],
+      fixes: [
+        { text: 'Revenue grew 12% last year【4†source】.\n', output: 'Revenue grew 12% last year.\n' },
+        { text: 'The policy changed in March :contentReference[oaicite:2]{index=2}.\n', output: 'The policy changed in March.\n' },
+        { text: 'See the [docs](https://example.org/guide?utm_source=chatgpt.com).\n', output: 'See the [docs](https://example.org/guide).\n' },
+        { text: 'See <https://example.org/a?utm_source=chatgpt.com&page=2>.\n', output: 'See <https://example.org/a?page=2>.\n' },
+        { text: 'See https://example.org/a?page=2&utm_source=openai for details.\n', output: 'See https://example.org/a?page=2 for details.\n' },
+        { text: 'Run:\n\n```sh\ncurl "https://example.org/?utm_source=chatgpt.com"\n```\n', output: 'Run:\n\n```sh\ncurl "https://example.org/?utm_source=chatgpt.com"\n```\n' },
+        { path: 'a.js', text: 'fetch("https://example.org/?utm_source=chatgpt.com");\n', output: 'fetch("https://example.org/?utm_source=chatgpt.com");\n' },
+      ],
     },
+    autofix: citationEdits,
   },
   {
     id: 'prose/placeholder',

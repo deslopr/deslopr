@@ -119,27 +119,44 @@ export function ruleOptions(rule, config = {}) {
   return out;
 }
 
+export function normalizePath(path) {
+  return (path || 'stdin.md').replace(/\\/g, '/');
+}
+
+/**
+ * What a rule sees of one file. The BOM is stripped, so indexes are into `raw`.
+ * Returns null for data files, which no rule reads.
+ * @param {string} text
+ * @param {string} path
+ * @param {object} config
+ */
+export function createContext(text, path, config = {}) {
+  const raw = text.replace(/^\uFEFF/, '');
+  const info = classify(path);
+  if (info.kind === 'data') return null;
+  const views = buildViews(raw, info);
+  const starts = lineStarts(raw);
+  const proseText = [views.prose, views.comments, views.ui].filter(Boolean).join('\n');
+  const words = countWords(proseText);
+  return { path, info, raw, views, starts, words, lines: starts.length, config, positionOf: (i) => positionOf(starts, i) };
+}
+
 /**
  * Scan one file's text.
  * @param {string} text
  * @param {{ path?: string, config?: object, rules?: object[] }} [opts]
  */
 export function scanText(text, opts = {}) {
-  const path = (opts.path || 'stdin.md').replace(/\\/g, '/');
+  const path = normalizePath(opts.path);
   const config = opts.config || {};
   const rules = opts.rules || RULES;
-  const raw = text.replace(/^\uFEFF/, '');
   const info = classify(path);
   const findings = [];
-  if (info.kind === 'data') return finalize({ path, info, findings, words: 0, lines: 0 });
-  const views = buildViews(raw, info);
-  const starts = lineStarts(raw);
+  const ctx = createContext(text, path, config);
+  if (!ctx) return finalize({ path, info, findings, words: 0, lines: 0 });
+  const { raw, views, starts, words, lines } = ctx;
   const disabled = parseDirectives(raw, starts);
   const allowWords = (config.allow || []).map((w) => w.toLowerCase());
-  const proseText = [views.prose, views.comments, views.ui].filter(Boolean).join('\n');
-  const words = countWords(proseText);
-  const lines = starts.length;
-  const ctx = { path, info, raw, views, starts, words, lines, config, positionOf: (i) => positionOf(starts, i) };
 
   for (const rule of rules) {
     const severity = effectiveSeverity(rule, config);

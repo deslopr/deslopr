@@ -1,3 +1,4 @@
+// deslopr-disable-file prose/chat-citation -- the fix tests write pasted citation markers on purpose
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -157,4 +158,69 @@ test('templates: block upsert keeps user content, compact rules fit 1,500 charac
   assert.equal(upsertBlock(once, block), once);
   assert.equal(removeBlock(once).trim(), '# Mine');
   assert.ok(COMPACT_RULES.length <= 1500);
+});
+
+test('fix previews a diff git can apply, refuses to write what git cannot restore, then writes', () => {
+  const dir = gitRepo();
+  const g = (...a) => execFileSync('git', a, { cwd: dir, encoding: 'utf8' });
+  fs.writeFileSync(path.join(dir, 'notes.md'), 'Revenue grew last year【4†source】.\n\nI hope this helps!\n');
+  fs.writeFileSync(path.join(dir, 'a.js'), 'function f(x) {\n  debugger;\n  return x;\n}\n');
+  g('add', '.');
+  g('commit', '-q', '-m', 'add');
+
+  const preview = run(['fix'], { cwd: dir });
+  assert.equal(preview.code, 1);
+  assert.match(preview.out, /^--- a\/a\.js\n\+\+\+ b\/a\.js\n@@ -1,4 \+1,3 @@\n function f\(x\) \{\n-  debugger;\n/m);
+  assert.match(preview.out, /3 fixes in 2 files .*Nothing was written/);
+  assert.equal(g('status', '--porcelain'), '', 'a preview must not touch the tree');
+  const patch = path.join(dir, '..', `${path.basename(dir)}.diff`);
+  fs.writeFileSync(patch, preview.out.split('\ndeslopr fix:')[0]);
+  g('apply', '--check', patch);
+
+  fs.appendFileSync(path.join(dir, 'a.js'), '// local edit\n');
+  const refused = run(['fix', '--write'], { cwd: dir });
+  assert.equal(refused.code, 2);
+  assert.match(refused.err, /unstaged changes or are untracked: a\.js/);
+  assert.match(fs.readFileSync(path.join(dir, 'notes.md'), 'utf8'), /source/, 'a refused write changes nothing');
+
+  g('checkout', '--', 'a.js');
+  const written = run(['fix', '--write'], { cwd: dir });
+  assert.equal(written.code, 0);
+  assert.match(written.out, /applied 3 fixes in 2 files/);
+  assert.equal(fs.readFileSync(path.join(dir, 'notes.md'), 'utf8'), 'Revenue grew last year.\n');
+  assert.equal(fs.readFileSync(path.join(dir, 'a.js'), 'utf8'), 'function f(x) {\n  return x;\n}\n');
+  assert.equal(run(['fix'], { cwd: dir }).code, 0);
+});
+
+test('fix --diff only touches added lines; --stdin and --json work', () => {
+  const dir = gitRepo();
+  const g = (...a) => execFileSync('git', a, { cwd: dir, encoding: 'utf8' });
+  fs.writeFileSync(path.join(dir, 'notes.md'), 'Old line【1†source】.\n');
+  g('add', '.');
+  g('commit', '-q', '-m', 'old');
+  g('checkout', '-q', '-b', 'feature');
+  fs.appendFileSync(path.join(dir, 'notes.md'), 'New line【2†source】.\n');
+  g('commit', '-qam', 'new');
+  const r = run(['fix', '--diff', 'main', '--write'], { cwd: dir });
+  assert.equal(r.code, 0);
+  assert.equal(fs.readFileSync(path.join(dir, 'notes.md'), 'utf8'), 'Old line【1†source】.\nNew line.\n');
+
+  const s = run(['fix', '--stdin', '--stdin-filename', 'x.md'], { input: 'Done.【3†source】\n' });
+  assert.equal(s.code, 0);
+  assert.equal(s.out, 'Done.\n');
+
+  const j = JSON.parse(run(['fix', '--json'], { cwd: dir }).out);
+  assert.equal(j.summary.fixes, 1);
+  assert.equal(j.files[0].path, 'notes.md');
+  assert.match(j.files[0].diff, /^-Old line【1†source】\.$/m);
+});
+
+test('fix --write outside git needs --allow-dirty', () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'a.md'), 'Done.【3†source】\n');
+  const r = run(['fix', '--write'], { cwd: dir });
+  assert.equal(r.code, 2);
+  assert.match(r.err, /not a git repository/);
+  assert.equal(run(['fix', '--write', '--allow-dirty'], { cwd: dir }).code, 0);
+  assert.equal(fs.readFileSync(path.join(dir, 'a.md'), 'utf8'), 'Done.\n');
 });

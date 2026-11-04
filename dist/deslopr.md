@@ -46,6 +46,8 @@ npx deslopr --staged                     # only staged lines
 npx deslopr --stdin --stdin-filename draft.md < draft.txt
 npx deslopr <paths> --json               # machine-readable, for many files
 npx deslopr explain <rule-id>            # why a rule exists and how to fix it
+npx deslopr fix <paths>                  # the safe automatic fixes, as a diff; writes nothing
+npx deslopr fix <paths> --write          # apply them (refuses files git could not restore)
 ```
 
 Severity tells you how much to trust a finding:
@@ -56,7 +58,7 @@ Severity tells you how much to trust a finding:
 
 The detector reads source, not meaning. After it runs, read the content yourself for the patterns marked **judgment** in the references (synonym cycling, generic examples, single-implementation abstractions, nested cards, and others). If you cannot run commands, apply the catalogs by reading; the gate still applies.
 
-To keep a line the detector flags, leave it and add a reason the next reader will understand:
+Some findings are deliberate: a gradient that is the brand, a quoted sentence, a broad catch at a trust boundary. When something might be intentional, ask the user before you change it. To keep a line the detector flags, leave it and add a reason the next reader will understand:
 
 ```
 <!-- deslopr-disable-next-line prose/binary-contrast -- quoted from the customer interview -->
@@ -74,6 +76,7 @@ To keep a line the detector flags, leave it and add a reason the next reader wil
 End with the counts, the three fixes that matter most, and an offer to clean. Do not rewrite, do not score the author, do not speculate about who wrote it.
 
 **Clean.**
+- Start with `npx deslopr fix`: it repairs only what needs no judgment (pasted citation markers, standalone chat sentences, debugger lines, stray zero-width characters). Show the user the diff, apply it with `--write` once they agree, and commit it on its own.
 - Writing: edit in place with the minimum effective edit. Return the full edited text and a short **What changed** list (pattern, before, after). Keep the author's vocabulary, rhythm, humor and opinions.
 - Code: follow the cleanup rules in the "code" part below. Run the tests first; without passing tests, report only. One pattern class per commit. Changes that touch behavior go in their own clearly labelled commit, or stay in the report.
 - UI: fix, then render it and look. A source fix that breaks layout is not a fix.

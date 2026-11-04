@@ -40,6 +40,14 @@ Rules live in `src/core/rules/` (`prose.js`, `code.js`, `ui.js`, `repo.js`). A r
 - Examples are strings (scanned as `example.md`) or `{ path, text }` objects; the extension picks the views.
 - Every `bad` example must fire and every `good` example must stay quiet; `npm test` checks both automatically, so the examples are the tests.
 
+### Adding an autofix
+
+A rule can repair what it finds with `autofix(ctx, options)`, returning edits `{ start, end, text, line }` on `ctx.raw`. Add one only when the fix needs no judgment and cannot change what a program does. The engine applies an edit only where the scan reported the rule on `line`, drops overlapping edits, and discards the whole file's fixes if the result gains any finding, but those guards are a net, not a licence.
+
+- Touch only text the rule reads: check spans with `inView(ctx, view, start, end)` and never edit string literals a program uses.
+- Prefer leaving a case alone to guessing. Every `examples.fixes` list needs at least one look-alike whose `output` equals its `text`.
+- `examples.fixes` entries are `{ path?, text, output }`; `npm test` checks the output, that fixing twice changes nothing, and that no `good` example is changed.
+
 Then:
 
 ```bash

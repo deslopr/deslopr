@@ -7,12 +7,27 @@ Repérer et supprimer le « slop » d'IA dans les textes, le code et les interfa
 ```bash
 npx deslopr            # analyser ce dossier
 npx deslopr --diff     # seulement ce que votre branche ajoute
+npx deslopr fix        # voir les corrections sûres sous forme de diff ; --write les applique
 npx deslopr init       # apprendre les règles à votre agent de code
+```
+
+## À coller dans votre IA
+
+Collez ce texte dans Claude Code, Codex, Cursor, Copilot ou tout agent qui peut lancer des commandes dans votre projet. Il installe deslopr, analyse le dépôt et vous demande votre accord avant de modifier quoi que ce soit.
+
+```text
+Installe deslopr (https://github.com/deslopr/deslopr) dans ce dépôt et fais une première passe de nettoyage.
+
+1. Lance `npx -y deslopr init`, puis lis le skill installé (SKILL.md) et suis-le à partir de maintenant.
+2. Lance `npx -y deslopr` et résume les résultats par règle, du plus grave au moins grave. Ne modifie rien pour l'instant.
+3. Lance `npx -y deslopr fix` et montre-moi le diff des corrections automatiques sûres. Ne les applique avec `npx -y deslopr fix --write` qu'après mon accord.
+4. Pour le reste, propose des corrections par petits lots (un type de problème par commit, tests au vert après chacun) et attends mon feu vert pour chaque lot.
+5. Certains éléments signalés sont voulus. Avant de toucher à quelque chose qui pourrait l'être (un dégradé de la marque, une citation, un try/catch défensif), demande-moi. Pour le garder, ajoute `deslopr-disable-next-line <règle> -- <raison>` au-dessus, ou ajoute le terme à "allow" dans .deslopr.json.
 ```
 
 deslopr réunit trois briques :
 
-1. **Un détecteur.** Une CLI sans dépendance, 66 règles : prose (anglais et français), code, interface, hygiène du dépôt. Elle lit le markdown, les commentaires, le texte JSX, le HTML, le CSS et les classes Tailwind. Elle tourne en CI, en pre-commit, dans votre agent après chaque modification, ou dans un onglet de navigateur.
+1. **Un détecteur.** Une CLI sans dépendance, 66 règles : prose (anglais et français), code, interface, hygiène du dépôt. Elle lit le markdown, les commentaires, le texte JSX, le HTML, le CSS et les classes Tailwind. Elle tourne en CI, en pre-commit, dans votre agent après chaque modification, ou dans un onglet de navigateur. `deslopr fix` corrige les cas qui ne demandent aucun jugement et montre d'abord le diff.
 2. **Un skill pour agents.** `skills/deslopr/` suit le format [Agent Skills](https://agentskills.io). Il apprend à Claude Code, Codex, Cursor, Copilot, Gemini, Windsurf, Cline et à tout agent qui lit `AGENTS.md` à reconnaître le slop, à écrire autre chose à la place, et à nettoyer sans rien casser.
 3. **Une porte de sortie.** Une courte liste de vérifications que l'agent passe avant de dire « terminé », avec une preuve pour chaque ligne.
 
@@ -57,6 +72,16 @@ Après chaque `Write` ou `Edit`, le détecteur vérifie les lignes que l'agent v
 
 **Dans le navigateur :** ouvrez [playground/index.html](playground/index.html), collez un texte ou du code, chaque motif est surligné. Rien ne quitte la page.
 
+## Corrections sûres
+
+`npx deslopr fix` affiche les corrections sous forme de diff sans rien écrire ; `--write` les applique, `--diff` se limite aux lignes ajoutées par votre branche, `--rule <id>` à un seul type de correction. Elle ne corrige que ce qui ne demande aucun jugement : marqueurs de citation collés (`【4†source】`, `utm_source=chatgpt.com`), phrases de chatbot isolées (`J'espère que cela vous aide !`), lignes `debugger` et `breakpoint()`, caractères invisibles collés à un espace.
+
+- **Aperçu d'abord.** Sans `--write`, rien n'est écrit.
+- **Seulement ce que git peut annuler.** `--write` refuse les fichiers non suivis ou modifiés sans être indexés : `git diff` montre exactement les corrections, `git restore` les annule. `--allow-dirty` lève ce garde-fou.
+- **Seulement ce qui a été signalé.** Les exceptions, `allow`, les règles désactivées et `--diff` valent aussi pour les corrections.
+- **Jamais un problème contre un autre.** Chaque fichier corrigé est réanalysé ; si une règle y trouve plus qu'avant, le fichier reste intact.
+- **Le code continue de marcher.** Une ligne `debugger` reste en place quand la retirer pourrait changer le programme, et les chaînes utilisées par le programme ne sont jamais modifiées.
+
 ## Configuration
 
 `.deslopr.json` à la racine du projet :
@@ -70,6 +95,19 @@ Après chaque `Write` ou `Edit`, le détecteur vérifie les lignes que l'agent v
   "failOn": "error"
 }
 ```
+
+### Garder ce qui compte
+
+Un signalement est une question, pas un verdict. Quand le dégradé est celui de la marque, que la phrase est une citation ou que le `catch` large protège une frontière de confiance, gardez-le et dites-le une fois à deslopr : ni l'analyse ni `deslopr fix` n'y toucheront plus.
+
+| Pour garder | Utilisez |
+|---|---|
+| Une ligne | `deslopr-disable-next-line <règle> -- <raison>` au-dessus, ou `deslopr-disable-line` sur la ligne |
+| Un bloc | `deslopr-disable <règle>` ... `deslopr-enable <règle>` |
+| Un fichier entier | `deslopr-disable-file <règle> -- <raison>` |
+| Un mot ou un nom partout | `"allow": ["Acme Corp"]` dans `.deslopr.json` |
+| Une règle qui ne vous convient pas | `"rules": { "prose/em-dash-density": "off" }`, ou une gravité plus basse |
+| Des dossiers générés ou importés | `"ignore": ["vendor/**"]` |
 
 Pour garder une ligne signalée, dites pourquoi juste au-dessus :
 

@@ -13,29 +13,34 @@ function rescore(result, kept) {
 }
 
 /**
+ * The files a scan or a fix covers, and for --diff and --staged the added lines of each.
  * @param {{ root: string, targets?: string[], config: object, diff?: string|boolean, staged?: boolean }} opts
+ * @returns {{ root: string, files: string[], added: Map<string, Set<number>|'all'>|null }}
  */
-export function scanProject(opts) {
+export function selectFiles(opts) {
   const { config } = opts;
   const root = realPath(opts.root);
   const targets = opts.targets || [];
   const ignore = makeIgnore(config.ignore || []);
-  let files;
-  let added = null;
-  if (opts.diff || opts.staged) {
-    const repo = gitRoot(root);
-    if (!repo) throw new Error('--diff and --staged need a git repository');
-    const base = typeof opts.diff === 'string' ? opts.diff : defaultBase(repo);
-    added = diffAddedLines(repo, { base, staged: opts.staged });
-    const rel = (p) => path.relative(root, path.join(repo, p)).split(path.sep).join('/');
-    const wanted = targets.length ? targets.map((t) => path.relative(root, path.resolve(root, t)).split(path.sep).join('/')) : null;
-    files = [...added.keys()].map(rel).filter((p) => !p.startsWith('..') && !ignore(p) && (!wanted || wanted.some((w) => w === '' || w === '.' || p === w || p.startsWith(w + '/'))));
-    const remapped = new Map();
-    for (const [p, lines] of added) remapped.set(rel(p), lines);
-    added = remapped;
-  } else {
-    files = listFiles(root, targets, { ignore: config.ignore || [] });
-  }
+  if (!opts.diff && !opts.staged) return { root, files: listFiles(root, targets, { ignore: config.ignore || [] }), added: null };
+  const repo = gitRoot(root);
+  if (!repo) throw new Error('--diff and --staged need a git repository');
+  const base = typeof opts.diff === 'string' ? opts.diff : defaultBase(repo);
+  const byRepoPath = diffAddedLines(repo, { base, staged: opts.staged });
+  const rel = (p) => path.relative(root, path.join(repo, p)).split(path.sep).join('/');
+  const wanted = targets.length ? targets.map((t) => path.relative(root, path.resolve(root, t)).split(path.sep).join('/')) : null;
+  const files = [...byRepoPath.keys()].map(rel).filter((p) => !p.startsWith('..') && !ignore(p) && (!wanted || wanted.some((w) => w === '' || w === '.' || p === w || p.startsWith(w + '/'))));
+  const added = new Map();
+  for (const [p, lines] of byRepoPath) added.set(rel(p), lines);
+  return { root, files, added };
+}
+
+/**
+ * @param {{ root: string, targets?: string[], config: object, diff?: string|boolean, staged?: boolean }} opts
+ */
+export function scanProject(opts) {
+  const { config } = opts;
+  const { root, files, added } = selectFiles(opts);
   const results = [];
   const skipped = [];
   for (const rel of files) {

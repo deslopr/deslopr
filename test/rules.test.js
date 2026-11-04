@@ -2,7 +2,7 @@
 // bad: the rule must fire. good: the rule must stay quiet (the look-alike that keeps it precise).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scanText, RULES } from '../src/core/index.js';
+import { scanText, fixText, RULES } from '../src/core/index.js';
 
 const asCase = (ex) => (typeof ex === 'string' ? { text: ex, path: 'example.md' } : ex);
 
@@ -33,4 +33,34 @@ for (const rule of RULES) {
 test('rule ids are unique', () => {
   const ids = RULES.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
+});
+
+// Autofixes: each fix example states the exact output, look-alikes included (output equal to
+// input). Fixing twice changes nothing, and a fixed file never gains a finding.
+for (const rule of RULES.filter((r) => typeof r.autofix === 'function')) {
+  test(`${rule.id} documents its autofix with examples`, () => {
+    assert.ok(rule.examples.fixes?.length, `${rule.id} has an autofix and needs examples.fixes`);
+    assert.ok(rule.examples.fixes.some((f) => f.output !== f.text), `${rule.id} needs a fix example that changes something`);
+    assert.ok(rule.examples.fixes.some((f) => f.output === f.text), `${rule.id} needs a look-alike its fix must leave alone`);
+  });
+  for (const ex of rule.examples.fixes || []) {
+    const path = ex.path || 'example.md';
+    test(`${rule.id} fixes: ${ex.text.slice(0, 50).replace(/\n/g, '\\n')}`, () => {
+      const r = fixText(ex.text, { path });
+      assert.equal(r.output, ex.output);
+      assert.equal(r.rejected, null);
+      assert.equal(fixText(r.output, { path }).changed, false, 'fixing twice must change nothing');
+      if (r.changed) assert.ok(r.after.findings.length < r.before.findings.length);
+    });
+  }
+}
+
+test('good examples never change under fix', () => {
+  for (const rule of RULES) {
+    for (const ex of rule.examples.good) {
+      const c = asCase(ex);
+      const r = fixText(c.text, { path: c.path });
+      assert.equal(r.output, c.text, `${rule.id}: fix changed a good example`);
+    }
+  }
 });

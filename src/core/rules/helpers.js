@@ -91,6 +91,41 @@ export function* matchAll(re, text) {
   }
 }
 
+// Autofix building blocks. An edit is { start, end, text, line }: replace raw[start, end)
+// with text; line is where the rule reports, so the engine only applies an edit the scan
+// actually reported (and that no directive or config silenced).
+
+// The span reads the same in the view as in the file, so it is text the rule may touch.
+export function inView(ctx, view, start, end) {
+  const v = ctx.views[view];
+  return typeof v === 'string' && v.slice(start, end) === ctx.raw.slice(start, end);
+}
+
+// The view a prose fix may touch: readable text in documents, comments in source.
+export function proseView(ctx) {
+  return ctx.info.kind === 'markdown' || ctx.info.kind === 'text' ? 'prose' : 'comments';
+}
+
+export function isBlankLine(ctx, line) {
+  return line >= 1 && line <= ctx.starts.length && lineText(ctx, line).trim() === '';
+}
+
+// An edit deleting one whole line. When the line sat alone between blank lines, one of them
+// goes too, so the removal does not leave a double gap.
+export function lineRemoval(ctx, line) {
+  const { starts, raw } = ctx;
+  const n = starts.length;
+  const endsWithNewline = raw.endsWith('\n');
+  let start = starts[line - 1];
+  let end = line < n ? starts[line] : raw.length;
+  if (line === n && line > 1) start -= 1;
+  const prevBlank = line === 1 || isBlankLine(ctx, line - 1);
+  const nextIsEof = line + 1 === n && endsWithNewline;
+  if (prevBlank && !nextIsEof && line + 1 < n && isBlankLine(ctx, line + 1)) end = starts[line + 1];
+  else if (nextIsEof && line > 1 && isBlankLine(ctx, line - 1)) start = starts[line - 2];
+  return { start, end, text: '', line };
+}
+
 // Colors, for the UI rules that judge hue.
 const NAMED = {
   purple: '#800080', violet: '#ee82ee', indigo: '#4b0082', blueviolet: '#8a2be2', magenta: '#ff00ff', fuchsia: '#ff00ff',

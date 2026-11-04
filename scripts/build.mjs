@@ -29,14 +29,16 @@ const emit = (rel, content) => outputs.set(rel, content.replace(/\r\n/g, '\n'));
     '',
     'Change a severity or turn a rule off in `.deslopr.json`; suppress one line with `deslopr-disable-next-line <rule> -- <reason>`.',
     '',
+    `${RULES.filter((r) => r.autofix).length} rules have a safe autofix, marked **autofix** below: \`deslopr fix\` previews it as a diff and \`deslopr fix --write\` applies it. The fix covers only the unambiguous cases; everything else stays a finding for a person.`,
+    '',
   ];
   for (const d of DOMAINS) {
     const list = RULES.filter((r) => r.domain === d);
     lines.push(`## ${DOMAIN_TITLE[d]}`, '', '| Rule | Severity | What it catches |', '|---|---|---|');
-    for (const r of list) lines.push(`| [\`${r.id}\`](#${r.id.replace(/[/]/g, '').toLowerCase()}) | ${r.severity} | ${r.name.replace(/\|/g, '\\|')} |`);
+    for (const r of list) lines.push(`| [\`${r.id}\`](#${r.id.replace(/[/]/g, '').toLowerCase()}) | ${r.severity}${r.autofix ? ', autofix' : ''} | ${r.name.replace(/\|/g, '\\|')} |`);
     lines.push('');
     for (const r of list) {
-      lines.push(`### ${r.id}`, '', `**${r.name}** · ${r.severity}${r.patterns?.some((p) => p.lang === 'fr') ? ' · English and French' : ''}`, '', `**Why.** ${r.why}`, '', `**Fix.** ${r.fix}`, '');
+      lines.push(`### ${r.id}`, '', `**${r.name}** · ${r.severity}${r.autofix ? ' · autofix' : ''}${r.patterns?.some((p) => p.lang === 'fr') ? ' · English and French' : ''}`, '', `**Why.** ${r.why}`, '', `**Fix.** ${r.fix}`, '');
       if (r.options) lines.push(`**Options.** \`${JSON.stringify(r.options)}\``, '');
       const block = (ex) => {
         const c = typeof ex === 'string' ? { path: 'example.md', text: ex } : ex;
@@ -44,6 +46,13 @@ const emit = (rel, content) => outputs.set(rel, content.replace(/\r\n/g, '\n'));
         return ['```' + (lang === 'md' ? 'markdown' : lang), c.text.trimEnd(), '```'].join('\n');
       };
       lines.push('Flags:', '', ...r.examples.bad.map(block), '', 'Does not flag:', '', ...r.examples.good.map(block), '');
+      if (r.autofix) {
+        const changed = r.examples.fixes.filter((f) => f.output !== f.text);
+        const kept = r.examples.fixes.filter((f) => f.output === f.text);
+        lines.push('`deslopr fix` changes:', '');
+        for (const f of changed) lines.push(block({ path: 'example.md', ...f }), '', 'into', '', block({ path: 'example.md', ...f, text: f.output }), '');
+        lines.push('and leaves alone:', '', ...kept.map((f) => block({ path: 'example.md', ...f })), '');
+      }
     }
   }
   emit('docs/RULES.md', lines.join('\n'));

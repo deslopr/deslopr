@@ -1,6 +1,6 @@
 // deslopr-disable-file -- rule examples quote slop on purpose
 // Code patterns: what coding agents leave in comments, tests and definitions.
-import { re, matchAll } from './helpers.js';
+import { re, matchAll, lineRemoval } from './helpers.js';
 
 const CODE_KINDS = ['code', 'markup', 'style'];
 
@@ -21,6 +21,39 @@ function identParts(code) {
 }
 
 const stem = (w) => w.replace(/(?:ies)$/, 'y').replace(/(?:es|s)$/, '');
+
+// Where removing a debugger line cannot change what the code does. JavaScript: the line
+// before closes a statement or opens a block (so an "if (x)" never loses its body) and the
+// line after cannot be glued onto it by semicolon insertion. Python: the line is not the only
+// statement of its block. Ruby: the line before does not continue onto it.
+const JS_EXTS = new Set(['js', 'mjs', 'cjs', 'jsx', 'ts', 'mts', 'cts', 'tsx']);
+const DEBUGGER_LINE = {
+  js: /^debugger[ \t]*;?$/,
+  py: /^(?:import i?pdb[ \t]*;[ \t]*)?(?:breakpoint\([ \t]*\)|i?pdb\.set_trace\([ \t]*\))[ \t]*;?$/,
+  rb: /^(?:binding\.pry|byebug)$/,
+};
+
+function neighbour(lines, i, step) {
+  for (let k = i + step; k >= 0 && k < lines.length; k += step) if (lines[k].trim()) return { text: lines[k].replace(/\s+$/, ''), index: k };
+  return null;
+}
+
+function debuggerRemovable(lang, lines, i) {
+  const prev = neighbour(lines, i, -1);
+  const next = neighbour(lines, i, 1);
+  const indent = (s) => /^[ \t]*/.exec(s)[0].length;
+  if (lang === 'js') {
+    const closes = !prev || /[{};]$/.test(prev.text) || /^\s*(?:case\b[^\n]*|default\s*):$/.test(prev.text);
+    const glues = next && /^\s*[([`+\-/.]/.test(next.text);
+    return closes && !glues;
+  }
+  if (lang === 'py') {
+    if (prev && /\\$/.test(prev.text)) return false;
+    if (prev && /:$/.test(prev.text)) return !!next && indent(next.text) === indent(lines[i]);
+    return true;
+  }
+  return !prev || !/(?:[\\,(\[=+\-*/.?:]|&&|\|\|)$/.test(prev.text);
+}
 
 function viewLines(text) {
   return text ? text.split('\n') : [];
@@ -338,6 +371,25 @@ export default [
     examples: {
       bad: [{ path: 'a.js', text: 'function f(x) {\n  debugger;\n  return x;\n}\n' }, { path: 'a.py', text: 'def f(x):\n    breakpoint()\n    return x\n' }],
       good: [{ path: 'a.js', text: '// Set a breakpoint here with `debugger` when tracing.\nfunction f(x) { return x; }\n' }],
+      fixes: [
+        { path: 'a.js', text: 'function f(x) {\n  debugger;\n  return x;\n}\n', output: 'function f(x) {\n  return x;\n}\n' },
+        { path: 'a.py', text: 'def f(x):\n    import pdb; pdb.set_trace()\n    return x\n', output: 'def f(x):\n    return x\n' },
+        { path: 'a.rb', text: 'def f(x)\n  binding.pry\n  x\nend\n', output: 'def f(x)\n  x\nend\n' },
+        { path: 'a.js', text: 'if (ready)\n  debugger;\nstart();\n', output: 'if (ready)\n  debugger;\nstart();\n' },
+        { path: 'a.js', text: 'const f = function () {}\ndebugger\n(init)();\n', output: 'const f = function () {}\ndebugger\n(init)();\n' },
+        { path: 'a.py', text: 'if ready:\n    breakpoint()\nstart()\n', output: 'if ready:\n    breakpoint()\nstart()\n' },
+      ],
+    },
+    autofix(ctx) {
+      const lang = JS_EXTS.has(ctx.info.ext) ? 'js' : ctx.info.ext === 'py' ? 'py' : ctx.info.ext === 'rb' ? 'rb' : null;
+      if (!lang || !ctx.views.code) return [];
+      const lines = ctx.views.code.split('\n');
+      const out = [];
+      for (let i = 0; i < lines.length; i++) {
+        if (!DEBUGGER_LINE[lang].test(lines[i].trim())) continue;
+        if (debuggerRemovable(lang, lines, i)) out.push(lineRemoval(ctx, i + 1));
+      }
+      return out;
     },
   },
   {

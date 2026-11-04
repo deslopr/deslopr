@@ -7,12 +7,27 @@ English | [Français](README.fr.md)
 ```bash
 npx deslopr            # scan this folder
 npx deslopr --diff     # only what your branch added
+npx deslopr fix        # preview the safe fixes as a diff; --write applies them
 npx deslopr init       # teach your coding agent the rules
+```
+
+## Hand it to your AI
+
+Paste this into Claude Code, Codex, Cursor, Copilot or any agent that can run commands in your project. It installs deslopr, scans, and asks you before it changes anything.
+
+```text
+Set up deslopr (https://github.com/deslopr/deslopr) in this repository and run a first cleanup pass.
+
+1. Run `npx -y deslopr init`, then read the skill it installed (SKILL.md) and follow it from now on.
+2. Run `npx -y deslopr` and summarize the findings by rule, most severe first. Change nothing yet.
+3. Run `npx -y deslopr fix` and show me the diff of the safe automatic fixes. Apply them with `npx -y deslopr fix --write` only after I say yes.
+4. For everything else, propose fixes in small batches (one kind of problem per commit, tests passing after each) and wait for my go-ahead on each batch.
+5. Some flagged things are deliberate. Before you change anything that might be (a brand gradient, a quoted sentence, a defensive try/catch), ask me. To keep it, add `deslopr-disable-next-line <rule> -- <reason>` above it, or add the term to "allow" in .deslopr.json.
 ```
 
 deslopr is three things that work together:
 
-1. **A detector.** A zero-dependency CLI with 66 rules across prose (English and French), code, UI and repository hygiene. It reads markdown, source comments, JSX text, HTML, CSS and Tailwind classes, and it runs in CI, in a pre-commit hook, in your agent after every edit, or in a browser tab.
+1. **A detector.** A zero-dependency CLI with 66 rules across prose (English and French), code, UI and repository hygiene. It reads markdown, source comments, JSX text, HTML, CSS and Tailwind classes, and it runs in CI, in a pre-commit hook, in your agent after every edit, or in a browser tab. `deslopr fix` repairs the cases that need no judgment and shows you the diff first.
 2. **An agent skill.** `skills/deslopr/` follows the [Agent Skills](https://agentskills.io) format. It teaches Claude Code, Codex, Cursor, Copilot, Gemini, Windsurf, Cline and any `AGENTS.md` agent what slop looks like, what to write instead, and how to clean it without breaking anything.
 3. **A gate.** A short checklist the agent passes before it says "done", with evidence for every line.
 
@@ -147,6 +162,28 @@ npx deslopr --rule code/swallowed-error --disable ui/overused-font
 
 Exit codes: `0` nothing at or above `--fail-on`, `1` findings, `2` usage or runtime error.
 
+### Safe fixes
+
+```bash
+npx deslopr fix                        # print the fixes as a unified diff; change nothing
+npx deslopr fix --write                # apply them
+npx deslopr fix --diff --write         # only on lines your branch added
+npx deslopr fix --rule prose/chat-citation --write   # one kind of fix, for one commit
+pbpaste | npx deslopr fix --stdin      # print the fixed text
+```
+
+`deslopr fix` repairs only what never needs judgment: pasted citation markers (`【4†source】`, `utm_source=chatgpt.com`), chat sentences that stand alone (`I hope this helps!`), `debugger` and `breakpoint()` lines, and zero-width characters next to a space. Rules that can be fixed are marked in `npx deslopr rules` and in [docs/RULES.md](docs/RULES.md); everything else stays a finding for a person or an agent.
+
+It is built to be safe to run on any repository:
+
+- **Preview first.** Without `--write` it prints a diff (one `git apply` accepts) and writes nothing.
+- **Only what git can undo.** `--write` refuses files that are untracked or have unstaged changes, so `git diff` shows exactly the fixes and `git restore` undoes them. `--allow-dirty` overrides this.
+- **Only what was reported.** A fix applies where the scan reported that rule on that line, so suppressions, `allow`, disabled rules and `--diff` hold for fixes too.
+- **Never trades one problem for another.** Each fixed file is scanned again; if any rule reports more than before, the file is left untouched.
+- **Code keeps working.** A `debugger` line is kept when removing it could change the program: the body of a brace-less `if`, a line that semicolon insertion would join to the next, the only statement of a Python block. Strings the program uses are never edited.
+
+Exit codes: `0` nothing to fix or fixes written, `1` a preview found fixes, `2` usage or runtime error, including a refused write.
+
 ## Configuration
 
 `.deslopr.json` at the project root (or a `deslopr` key in `package.json`):
@@ -168,6 +205,19 @@ Exit codes: `0` nothing at or above `--fail-on`, `1` findings, `2` usage or runt
 ```
 
 A rule key can be an id (`prose/binary-contrast`), a domain (`code`) or `*`. `allow` lists words and phrases that are never reported, such as brand names and terms of art.
+
+### Keeping what matters
+
+A finding is a question, not a verdict. When the gradient is the brand, the sentence is a quote or the broad `catch` sits at a trust boundary, keep it and tell deslopr once; neither the scan nor `deslopr fix` will touch it again.
+
+| To keep | Use |
+|---|---|
+| One line | `deslopr-disable-next-line <rule> -- <reason>` above it, or `deslopr-disable-line` on it |
+| A block | `deslopr-disable <rule>` ... `deslopr-enable <rule>` |
+| A whole file | `deslopr-disable-file <rule> -- <reason>` |
+| A word or name everywhere | `"allow": ["Acme Corp"]` in `.deslopr.json` |
+| A rule you disagree with | `"rules": { "prose/em-dash-density": "off" }`, or a lower severity |
+| Generated or vendored folders | `"ignore": ["vendor/**"]` |
 
 To keep one line, say why next to it:
 
