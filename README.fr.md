@@ -1,8 +1,20 @@
-# deslopr
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+    <img alt="deslopr" src=".github/assets/banner-light.svg" width="720">
+  </picture>
+</h1>
 
-Repérer et supprimer le « slop » d'IA dans les textes, le code et les interfaces, et l'empêcher de revenir dans ce que produisent vos agents.
+<p align="center">Repérer et supprimer le « slop » d'IA dans les textes, le code et les interfaces, et l'empêcher de revenir dans ce que produisent vos agents.</p>
 
-[English](README.md) | Français
+<p align="center">
+  <a href="https://github.com/deslopr/deslopr/actions/workflows/ci.yml"><img alt="État de la CI" src="https://github.com/deslopr/deslopr/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/license-MIT-0A0A0A"></a>
+  <img alt="Aucune dépendance à l'exécution" src="https://img.shields.io/badge/dependencies-0-0A0A0A">
+  <img alt="Node 18 ou plus" src="https://img.shields.io/badge/node-%E2%89%A518-0A0A0A">
+</p>
+
+<p align="center"><a href="README.md">English</a> · Français</p>
 
 ```bash
 npx deslopr            # analyser ce dossier

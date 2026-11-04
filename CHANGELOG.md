@@ -8,6 +8,7 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 - `deslopr fix`: safe automatic fixes for pasted citation markers, standalone chat sentences, `debugger` and `breakpoint()` lines, and zero-width characters next to a space. It prints a diff by default; `--write` applies it only to files git can restore, and a fix is dropped if the result would gain any finding. Works with `--diff`, `--staged`, `--rule`, `--stdin` and `--json`.
 - `deslopr rules`, `deslopr explain` and `docs/RULES.md` mark the rules that have an autofix; a scan points to `deslopr fix` when some findings can be fixed.
+- A logo and brand assets in `.github/assets/` (mark, logo, README banner for light and dark themes, social preview image); the README opens with the banner, and the playground has a favicon.
 - README: a prompt to paste into a coding agent that installs deslopr and runs a first pass, and a table of the ways to keep a deliberate finding.
 
 ### Fixed

@@ -1,8 +1,20 @@
-# deslopr
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+    <img alt="deslopr" src=".github/assets/banner-light.svg" width="720">
+  </picture>
+</h1>
 
-Find and remove AI slop in writing, code and interfaces, and keep it out of what your agents produce next.
+<p align="center">Find and remove AI slop in writing, code and interfaces, and keep it out of what your agents produce next.</p>
 
-English | [Français](README.fr.md)
+<p align="center">
+  <a href="https://github.com/deslopr/deslopr/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/deslopr/deslopr/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-0A0A0A"></a>
+  <img alt="Zero runtime dependencies" src="https://img.shields.io/badge/dependencies-0-0A0A0A">
+  <img alt="Node 18 or later" src="https://img.shields.io/badge/node-%E2%89%A518-0A0A0A">
+</p>
+
+<p align="center">English · <a href="README.fr.md">Français</a></p>
 
 ```bash
 npx deslopr            # scan this folder
