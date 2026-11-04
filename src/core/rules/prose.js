@@ -264,8 +264,8 @@ export default [
     why: 'A noun phrase, a colon, then a lowercase reveal ("The best part: it learns.") is staged drama.',
     fix: 'Rewrite as one plain sentence; keep colons for lists, labels and quotes.',
     patterns: [
-      { lang: 'en', re: re(`(?:^|(?<=[.!?]\\s)|(?<=\\n\\s*))(?:[Tt]he|[Hh]ere['’]s the|[Aa]nd the|[Bb]ut the) (?:best|real|key|secret|magic|hard|crazy|wild|interesting|surprising|funny|important|tricky|scary|beautiful|kicker|catch|twist|trick)(?: (?:part|thing|bit|trick|insight|ingredient|lesson|takeaway|difference|move|news))?:\\s+[a-z]`, 'gmu') },
-      { lang: 'fr', re: re(`(?:^|(?<=[.!?]\\s)|(?<=\\n\\s*))(?:[Ll]e|[Ll]a|[Ee]t le|[Ee]t la|[Mm]ais le|[Mm]ais la) (?:meilleur|meilleure|vrai|vraie|seul|seule|plus beau|plus belle|plus grand|plus grande|plus gros|plus grosse) [\\p{L}]+${SP}?:\\s+[a-zà-ÿ]`, 'gmu') },
+      { lang: 'en', re: re(`(?!\\s)(?:^|(?<=[.!?]\\s)|(?<=\\n\\s*))(?:[Tt]he|[Hh]ere['’]s the|[Aa]nd the|[Bb]ut the) (?:best|real|key|secret|magic|hard|crazy|wild|interesting|surprising|funny|important|tricky|scary|beautiful|kicker|catch|twist|trick)(?: (?:part|thing|bit|trick|insight|ingredient|lesson|takeaway|difference|move|news))?:\\s+[a-z]`, 'gmu') },
+      { lang: 'fr', re: re(`(?!\\s)(?:^|(?<=[.!?]\\s)|(?<=\\n\\s*))(?:[Ll]e|[Ll]a|[Ee]t le|[Ee]t la|[Mm]ais le|[Mm]ais la) (?:meilleur|meilleure|vrai|vraie|seul|seule|plus beau|plus belle|plus grand|plus grande|plus gros|plus grosse) [\\p{L}]+${SP}?:\\s+[a-zà-ÿ]`, 'gmu') },
     ],
     examples: {
       bad: ['The best part: it learns from every review.', 'Le meilleur atout : il apprend tout seul.'],

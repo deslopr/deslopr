@@ -48,10 +48,15 @@ export function phrases(list, { caseSensitive = false } = {}) {
   return new RegExp(`${BEFORE}(?:${alts})${AFTER}`, caseSensitive ? 'gu' : 'giu');
 }
 
+// Blanked views hold long runs of spaces, and a variable-length lookbehind tried at every
+// position of a run rescans the whole run: quadratic time. NOT_RUN skips positions inside a
+// run before the lookbehind is tried; no phrase starts with one of these characters.
+const NOT_RUN = '(?![\\s>*#-])';
+
 /** Same as phrases(), but only at the start of a sentence, line or paragraph. */
 export function sentenceStart(list) {
   const alts = [...list].sort((a, b) => b.length - a.length).map(phraseSource).join('|');
-  return new RegExp(`(?:^|(?<=[.!?:]${SP}+)|(?<=\\n[ \\t>*#-]*))(?:${alts})${AFTER}`, 'gimu');
+  return new RegExp(`${NOT_RUN}(?:^|(?<=[.!?:]${SP}+)|(?<=\\n[ \\t>*#-]*))(?:${alts})${AFTER}`, 'gimu');
 }
 
 export function re(source, flags = 'giu') {

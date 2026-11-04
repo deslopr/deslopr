@@ -4,6 +4,10 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Fixed
+
+- Scans of large files are much faster: sentence-start patterns no longer rescan long runs of blanked text (a 54 KB HTML file went from 10 s to under 1 s). Findings are unchanged.
+
 ## [0.1.0] - 2026-11-03
 
 First release.
