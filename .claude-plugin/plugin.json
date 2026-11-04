@@ -1,0 +1,10 @@
+{
+  "name": "deslopr",
+  "version": "0.1.0",
+  "description": "Find and remove AI slop in prose, code and UI. Checks every edit and the final diff, and teaches the agent the patterns to avoid.",
+  "author": { "name": "deslopr contributors" },
+  "homepage": "https://github.com/deslopr/deslopr",
+  "repository": "https://github.com/deslopr/deslopr",
+  "license": "MIT",
+  "keywords": ["ai-slop", "writing", "code-quality", "ui", "linter", "humanizer"]
+}

@@ -1,0 +1,16 @@
+{
+  "description": "deslopr: check each edited file for AI slop, and the whole uncommitted change before the agent stops.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/deslopr.js\" hook", "timeout": 30 }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/deslopr.js\" hook --stop", "timeout": 60 }]
+      }
+    ]
+  }
+}

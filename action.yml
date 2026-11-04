@@ -1,0 +1,30 @@
+name: deslopr
+description: Find AI slop in prose, code and UI added by a pull request, as inline annotations.
+branding:
+  icon: filter
+  color: orange
+inputs:
+  args:
+    description: Arguments passed to deslopr. The default checks only lines the pull request adds.
+    default: ''
+  fail-on:
+    description: error, warn, info or none.
+    default: error
+  format:
+    description: github (inline annotations), sarif, markdown, json or text.
+    default: github
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SB_ARGS: ${{ inputs.args }}
+        SB_FAIL_ON: ${{ inputs.fail-on }}
+        SB_FORMAT: ${{ inputs.format }}
+        SB_BASE: ${{ github.base_ref }}
+      run: |
+        if [ -z "$SB_ARGS" ]; then
+          if [ -n "$SB_BASE" ]; then SB_ARGS="--diff=origin/$SB_BASE"; else SB_ARGS="."; fi
+        fi
+        # shellcheck disable=SC2086
+        node "$GITHUB_ACTION_PATH/bin/deslopr.js" $SB_ARGS --format "$SB_FORMAT" --fail-on "$SB_FAIL_ON"

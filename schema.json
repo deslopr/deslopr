@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "deslopr configuration",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "ignore": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns of files to skip."
+    },
+    "rules": {
+      "type": "object",
+      "description": "Rule id, domain/* or domain, mapped to a severity or to { severity, ...options }.",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "enum": [
+              "prose/chatbot-artifact",
+              "prose/chatbot-closer",
+              "prose/chat-citation",
+              "prose/placeholder",
+              "prose/binary-contrast",
+              "prose/negative-listing",
+              "prose/throat-clearing",
+              "prose/faux-insight",
+              "prose/rhetorical-reveal",
+              "prose/colon-reveal",
+              "prose/significance-inflation",
+              "prose/superficial-analysis",
+              "prose/weasel-attribution",
+              "prose/ai-vocabulary",
+              "prose/ai-vocabulary-cluster",
+              "prose/filler-phrase",
+              "prose/summary-ending",
+              "prose/hedge-stack",
+              "prose/false-range",
+              "prose/mic-drop",
+              "prose/em-dash-density",
+              "prose/emoji-decoration",
+              "prose/bold-overuse",
+              "code/elided-code",
+              "code/edit-narration",
+              "code/review-provenance",
+              "code/narrating-comment",
+              "code/step-comments",
+              "code/banner-comment",
+              "code/emoji-in-code",
+              "code/swallowed-error",
+              "code/speculative-generality",
+              "code/vague-todo",
+              "code/redundant-docstring",
+              "code/debugger-left",
+              "code/test-cannot-fail",
+              "code/version-suffix",
+              "code/commented-out-code",
+              "code/fallback-import",
+              "ui/ai-gradient",
+              "ui/gradient-text",
+              "ui/glow-shadow",
+              "ui/blurred-orb",
+              "ui/side-stripe",
+              "ui/glass-stack",
+              "ui/eyebrow-label",
+              "ui/unsourced-stat",
+              "ui/unverified-claim",
+              "ui/placeholder-person",
+              "ui/dead-control",
+              "ui/emoji-icon",
+              "ui/missing-alt",
+              "ui/focus-removed",
+              "ui/clickable-div",
+              "ui/overused-font",
+              "ui/generic-ai-icon",
+              "ui/generic-cta",
+              "ui/bounce-easing",
+              "ui/fake-window-chrome",
+              "ui/pulsing-dot",
+              "repo/secret",
+              "repo/merge-conflict",
+              "repo/local-path",
+              "repo/invisible-unicode",
+              "repo/agent-report-file",
+              "repo/duplicate-file"
+            ]
+          },
+          {
+            "pattern": "^(prose|code|ui|repo)(/\\*)?$"
+          },
+          {
+            "const": "*"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "error",
+              "warn",
+              "info",
+              "off"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warn",
+                  "info",
+                  "off"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "allow": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Words and phrases never reported (brand names, terms of art)."
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "en",
+          "fr"
+        ]
+      }
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "prose",
+          "code",
+          "ui",
+          "repo"
+        ]
+      }
+    },
+    "failOn": {
+      "enum": [
+        "error",
+        "warn",
+        "info",
+        "none"
+      ]
+    },
+    "hook": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warn",
+            "info"
+          ]
+        },
+        "onStop": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

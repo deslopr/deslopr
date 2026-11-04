@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>deslopr playground</title>
+  <meta name="description" content="Paste writing, code or markup and see every AI-slop pattern marked, with the reason and the fix. Runs in your browser.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1>deslopr</h1>
+    <p class="lede">Paste writing, code or markup. Every pattern gets marked with the reason and the fix. The detector runs in this tab; nothing is sent anywhere.</p>
+  </header>
+
+  <main class="desk">
+    <section class="sheet" aria-labelledby="input-title">
+      <div class="sheet-head">
+        <h2 id="input-title">Your text</h2>
+        <div class="controls">
+          <label>Read as
+            <select id="kind">
+              <option value="md">Markdown</option>
+              <option value="txt">Plain text</option>
+              <option value="tsx">React (TSX)</option>
+              <option value="html">HTML</option>
+              <option value="vue">Vue</option>
+              <option value="css">CSS</option>
+              <option value="py">Python</option>
+              <option value="js">JavaScript</option>
+              <option value="go">Go</option>
+            </select>
+          </label>
+          <label>Language
+            <select id="lang">
+              <option value="">English and French</option>
+              <option value="en">English</option>
+              <option value="fr">French</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="samples" role="group" aria-label="Load a sample">
+        <span class="samples-label">Samples:</span>
+        <button type="button" data-sample="post">Launch post</button>
+        <button type="button" data-sample="fr">Post en français</button>
+        <button type="button" data-sample="hero">React hero</button>
+        <button type="button" data-sample="py">Python service</button>
+        <button type="button" data-sample="clean">Clean release notes</button>
+      </div>
+      <label class="visually-hidden" for="input">Text to check</label>
+      <textarea id="input" spellcheck="false" placeholder="Paste a draft, a component or a diff here."></textarea>
+    </section>
+
+    <section class="sheet proof" aria-labelledby="proof-title" aria-live="polite">
+      <div class="sheet-head">
+        <h2 id="proof-title">Marked up</h2>
+        <p id="score" class="score">Nothing to check yet.</p>
+      </div>
+      <label class="toggle"><input type="checkbox" id="verbose"> Show info findings outside clusters</label>
+      <pre id="marked" class="marked" tabindex="0"></pre>
+      <ol id="findings" class="findings"></ol>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>66 rules for writing (English and French), code, interfaces and repository hygiene. Same engine as <code>npx deslopr</code>. <a href="../docs/RULES.md">All rules</a> · <a href="../README.md">Install in your agent</a></p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

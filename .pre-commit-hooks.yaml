@@ -1,0 +1,6 @@
+- id: deslopr
+  name: deslopr (AI slop in prose, code and UI)
+  entry: deslopr
+  language: node
+  types: [text]
+  require_serial: true

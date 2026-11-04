@@ -1,0 +1,34 @@
+name: New slop pattern
+description: A pattern deslopr misses. A real example comes first, then the rule.
+labels: [pattern]
+body:
+  - type: textarea
+    id: example
+    attributes:
+      label: A real example
+      description: Paste the text, code or markup as you found it (trim it, anonymise it). Say where it came from (which model or tool, if you know).
+    validations:
+      required: true
+  - type: textarea
+    id: lookalike
+    attributes:
+      label: A look-alike that must NOT be flagged
+      description: The closest legitimate use you can think of. This is what keeps a rule precise.
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options: [writing, code, interface, repository]
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language (for writing patterns)
+      placeholder: en, fr, de, es...
+  - type: textarea
+    id: fix
+    attributes:
+      label: What a careful human would write instead

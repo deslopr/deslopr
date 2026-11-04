@@ -1,0 +1,21 @@
+name: False positive
+description: deslopr flagged something that is fine.
+labels: [false-positive]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id
+      placeholder: prose/binary-contrast
+    validations:
+      required: true
+  - type: textarea
+    id: text
+    attributes:
+      label: The text or code it flagged, and the file type
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is legitimate here

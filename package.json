@@ -1,0 +1,54 @@
+{
+  "name": "deslopr",
+  "version": "0.1.0",
+  "description": "Find and remove AI slop in prose, code and UI. A zero-dependency detector, an agent skill for every coding agent, and a gate before anything ships.",
+  "keywords": [
+    "ai-slop",
+    "slop",
+    "linter",
+    "agent-skills",
+    "claude-code",
+    "cursor",
+    "codex",
+    "copilot",
+    "writing",
+    "code-quality",
+    "ui",
+    "humanizer"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "deslopr": "bin/deslopr.js"
+  },
+  "exports": {
+    ".": "./src/core/index.js",
+    "./node": "./src/node/index.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "skills/",
+    "adapters/",
+    "dist/",
+    "hooks/",
+    ".claude-plugin/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check && node --test && node bin/deslopr.js . --fail-on warn",
+    "dogfood": "node bin/deslopr.js . --fail-on warn"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deslopr/deslopr.git"
+  },
+  "homepage": "https://github.com/deslopr/deslopr#readme",
+  "bugs": "https://github.com/deslopr/deslopr/issues"
+}

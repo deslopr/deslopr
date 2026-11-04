@@ -1,0 +1,12 @@
+{
+  "name": "deslopr",
+  "owner": { "name": "deslopr contributors" },
+  "plugins": [
+    {
+      "name": "deslopr",
+      "source": "./",
+      "description": "Find and remove AI slop in prose, code and UI, with a detector that checks every edit.",
+      "version": "0.1.0"
+    }
+  ]
+}

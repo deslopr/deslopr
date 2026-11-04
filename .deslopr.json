@@ -1,0 +1,6 @@
+{
+  "$schema": "./schema.json",
+  "ignore": ["dist/deslopr-compact.md", "test/fixtures/sloppy/**"],
+  "rules": {},
+  "failOn": "warn"
+}
